@@ -4,6 +4,7 @@ services:
     env: python
     buildCommand: |
       apt-get update && apt-get install -y tesseract-ocr libtesseract-dev
+      apt-get install -y chromium chromium-driver
       pip install -r requirements.txt
     startCommand: "uvicorn main:app --host 0.0.0.0 --port 10000"
     autoDeploy: true
@@ -40,6 +41,7 @@ services:
     env: python
     buildCommand: |
       apt-get update && apt-get install -y tesseract-ocr libtesseract-dev
+      apt-get install -y chromium chromium-driver
       pip install -r requirements.txt
     startCommand: "python scheduler.py"
     autoDeploy: true
