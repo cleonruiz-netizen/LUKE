@@ -18,6 +18,8 @@ import json
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from core.versioncompare_engine import VersionCompareEngine
+from openai import OpenAI
+
 
 load_dotenv()
 
@@ -248,6 +250,87 @@ def manage_version_rotation(new_folder_prefix: str):
         print("✓ All new files cleaned up successfully")
     except Exception as e:
         print(f"⚠ Warning: Could not clean up {new_folder_prefix}: {e}")
+
+
+def map_topics_to_subjects_llm(client_topics: list[str], available_subjects: list[str]) -> list[str]:
+    """
+    Uses an OpenAI LLM to map a list of client topics/sectors to a list of
+    official, predefined regulatory subjects.
+
+    Args:
+        client_topics (list[str]): A list of topics provided by the user.
+        available_subjects (list[str]): The official list of subjects to map against.
+
+    Returns:
+        list[str]: A deduplicated list of official subjects that match the client topics.
+    """
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY not found in environment variables.")
+
+    print(f"Mapping client topics to official subjects using OpenAI...")
+
+    # Format the lists for clear inclusion in the prompt
+    client_topics_str = "\n- ".join(client_topics)
+    available_subjects_str = "\n- ".join(available_subjects)
+
+    system_prompt = (
+        "You are an intelligent legal-domain routing system. Your task is to accurately map a list of "
+        "client topics to a predefined list of official regulatory subjects. You must only use subjects "
+        "from the official list provided."
+    )
+    
+    user_prompt = (
+        f"Here is a list of client topics of interest:\n- {client_topics_str}\n\n"
+        f"Here is the complete list of official regulatory subjects:\n- {available_subjects_str}\n\n"
+        "For each client topic, identify all relevant official subjects from the list. "
+        "A single client topic can map to zero, one, or multiple official subjects. "
+        "Your response MUST be a valid JSON object. The JSON object should have a single key, 'mappings', "
+        "which is a dictionary. Each key in this dictionary should be a client topic, and its value should be a list "
+        "of the corresponding official subject names. If a client topic has no match, its value should be an empty list []."
+        "\nDo not include any explanations or conversational text outside of the JSON object."
+    )
+
+    try:
+        client = OpenAI(api_key=api_key)
+        response = client.chat.completions.create(
+            model="gpt-4-turbo",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0  # For deterministic mapping
+        )
+        
+        response_content = response.choices[0].message.content
+        parsed_response = json.loads(response_content)
+        
+        # --- Validation and Consolidation ---
+        # Never trust the LLM's output without validation.
+        
+        final_matched_subjects = set()
+        mappings = parsed_response.get("mappings", {})
+        
+        for topic, matches in mappings.items():
+            for match in matches:
+                # Ensure the LLM didn't hallucinate a subject name
+                if match in available_subjects:
+                    final_matched_subjects.add(match)
+                else:
+                    print(f"Warning: LLM returned a non-existent subject '{match}' for topic '{topic}'. It will be ignored.")
+        
+        print(f"  -> LLM successfully mapped to: {list(final_matched_subjects)}")
+        return list(final_matched_subjects)
+
+    except json.JSONDecodeError:
+        print(f"Error: Failed to decode JSON from OpenAI response: {response_content}")
+        return []
+    except Exception as e:
+        print(f"An error occurred while communicating with OpenAI: {e}")
+        # Re-raise as an HTTPException so the endpoint can handle it
+        raise Exception(status_code=503, detail=f"OpenAI API error: {e}")
+
 
 
 if __name__ == "__main__":
