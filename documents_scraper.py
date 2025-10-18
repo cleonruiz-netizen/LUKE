@@ -17,6 +17,7 @@ from datetime import datetime
 from collections import deque
 from urllib.parse import urlparse, urlunparse
 import tempfile
+import shutil
 
 # --- OpenAI and Environment Key Setup ---
 import openai
