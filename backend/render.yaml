@@ -1,0 +1,74 @@
+services:
+  - type: web
+    name: luke-api
+    env: python
+    plan: professional
+    buildCommand: |
+      apt-get update && apt-get install -y tesseract-ocr libtesseract-dev
+      pip install -r requirements.txt
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port 10000"
+    autoDeploy: true
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: COHERE_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        sync: false
+      - key: EMAIL_SENDER_ADDRESS
+        sync: false
+      - key: EMAIL_SENDER_PASSWORD
+        sync: false
+      - key: SMTP_SERVER_HOST
+        sync: false
+      - key: SMTP_SERVER_PORT
+        sync: false
+      - key: MONGO_DB_CONNECTION_STRING
+        sync: false
+      - key: GENERATION_MODEL
+        value: "gpt-4-turbo"
+
+  - type: worker
+    name: luke-scheduler
+    env: python
+    plan: professional
+    buildCommand: |
+      apt-get update && apt-get install -y tesseract-ocr libtesseract-dev
+      pip install -r requirements.txt
+    startCommand: "python scheduler.py"
+    autoDeploy: true
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: COHERE_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        sync: false
+      - key: EMAIL_SENDER_ADDRESS
+        sync: false
+      - key: EMAIL_SENDER_PASSWORD
+        sync: false
+      - key: SMTP_SERVER_HOST
+        sync: false
+      - key: SMTP_SERVER_PORT
+        sync: false
+      - key: MONGO_DB_CONNECTION_STRING
+        sync: false
+      - key: GENERATION_MODEL
+        value: "gpt-4-turbo"
