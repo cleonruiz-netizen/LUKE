@@ -103,7 +103,13 @@ def schedule_job():
         replace_existing=True
     )
     print("✓ Weekly job scheduled for every Saturday at 02:00 UTC")
-    print("  Next run:", scheduler.get_job("weekly_scrape_cycle").next_run_time)
+    job = scheduler.get_job("weekly_scrape_cycle")
+    if job:
+        next_run = scheduler.get_next_run_time()
+        print(f"  Next run: {next_run}")
+    else:
+        print("⚠️ No job found after scheduling.")
+
 
 
 async def start_scheduler():
