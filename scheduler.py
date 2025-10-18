@@ -104,11 +104,6 @@ def schedule_job():
     )
     print("✓ Weekly job scheduled for every Saturday at 02:00 UTC")
     job = scheduler.get_job("weekly_scrape_cycle")
-    if job:
-        next_run = scheduler.get_next_run_time()
-        print(f"  Next run: {next_run}")
-    else:
-        print("⚠️ No job found after scheduling.")
 
 
 
