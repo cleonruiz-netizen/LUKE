@@ -88,22 +88,26 @@ class SPIJScraper:
             "profile.default_content_setting_values.automatic_downloads": 1,
         }
         chrome_options.add_experimental_option("prefs", prefs)
-        
-        self.driver = webdriver.Chrome(
-            service=Service(ChromeDriverManager().install()),
-            options=chrome_options
-        )
 
+        # Detect Render or local
+        if os.environ.get("RENDER"):
+            # Running on Render – use system binaries
+            chrome_options.binary_location = shutil.which("chromium") or "/usr/bin/chromium"
+            service = Service(shutil.which("chromedriver") or "/usr/bin/chromedriver")
+        else:
+            # Local dev – use WebDriverManager
+            service = Service(ChromeDriverManager().install())
+
+        # Initialize driver
+        self.driver = webdriver.Chrome(service=service, options=chrome_options)
+
+        # Allow downloads in headless mode
         self.driver.execute_cdp_cmd(
             "Page.setDownloadBehavior",
             {"behavior": "allow", "downloadPath": self.temp_download_dir}    
         )
-        
-        if headless:
-            self.driver.execute_cdp_cmd('Page.setDownloadBehavior', {
-                'behavior': 'allow',
-                'downloadPath': self.temp_download_dir
-            })
+
+        print("✓ Chrome WebDriver initialized successfully.")
         
         self.base_url = "https://spij.minjus.gob.pe"
         
