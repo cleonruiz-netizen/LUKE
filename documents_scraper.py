@@ -40,7 +40,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 
 
 class SPIJScraper:
-    def __init__(self, headless=False, subject_folder=None):
+    def __init__(self, headless=True, subject_folder=None):
         """Initialize the scraper with Chrome WebDriver and Supabase client"""
         
         # Initialize Supabase client
@@ -584,15 +584,15 @@ class SPIJScraper:
 
 # Central dictionary mapping subjects to their starting URLs
 URLS_BY_SUBJECT = {
-    # "Anti-corruption": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682716",
-    # "Anti-terrorism": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682717",
-    # "Commercial": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682721",
-    # "Constitutional": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682723",
+    "Anti-corruption": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682716",
+    "Anti-terrorism": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682717",
+    "Commercial": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682721",
+    "Constitutional": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682723",
     "State Contracts and Acquisitions": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682724",
-    # "Free Competition": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682762",
-    # "Consumer Protection": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682779",
-    # "Registry": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682784",
-    # "Taxation": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682804",
+    "Free Competition": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682762",
+    "Consumer Protection": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682779",
+    "Registry": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682784",
+    "Taxation": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682804",
 }
 
 def get_llm_subject_match(subject_query: str, all_subjects: list) -> str | None:
@@ -716,7 +716,7 @@ def main():
     scrape_by_subject(
         subject_query="laws about state contracts", 
         max_depth=1,
-        headless=False
+        headless=True
     )
     
     # Another Example: Scrape for competition laws
