@@ -2,7 +2,6 @@ services:
   - type: web
     name: luke-api
     env: python
-    plan: professional
     buildCommand: |
       apt-get update && apt-get install -y tesseract-ocr libtesseract-dev
       pip install -r requirements.txt
@@ -39,7 +38,6 @@ services:
   - type: worker
     name: luke-scheduler
     env: python
-    plan: professional
     buildCommand: |
       apt-get update && apt-get install -y tesseract-ocr libtesseract-dev
       pip install -r requirements.txt
