@@ -10,13 +10,16 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 
 import config
+from .document_processor import DocumentProcessor
 from .schemas import StructuredData, Finding
+
 
 class AnalysisEngine:
     """Orchestrates AI tasks for document analysis and report generation."""
 
-    def __init__(self, full_text: str, topics: Optional[List[str]] = None):
-        self.full_text = full_text
+    def __init__(self, file, topics: Optional[List[str]] = None):
+        self.processor, quality_flags = DocumentProcessor(file)
+        self.full_text,  = self.processor.process()
         self.topics = topics or []
         self.client = OpenAI(api_key=config.OPENAI_API_KEY)
 
