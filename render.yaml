@@ -1,12 +1,9 @@
 services:
   - type: web
     name: luke-api
-    env: python
-    buildCommand: |
-      apt-get update && apt-get install -y tesseract-ocr libtesseract-dev
-      apt-get install -y chromium chromium-driver
-      pip install -r requirements.txt
-    startCommand: "uvicorn main:app --host 0.0.0.0 --port 10000"
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
     autoDeploy: true
     envVars:
       - key: PYTHONUNBUFFERED
@@ -38,12 +35,9 @@ services:
 
   - type: worker
     name: luke-scheduler
-    env: python
-    buildCommand: |
-      apt-get update && apt-get install -y tesseract-ocr libtesseract-dev
-      apt-get install -y chromium chromium-driver
-      pip install -r requirements.txt
-    startCommand: "python scheduler.py"
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile.scheduler
     autoDeploy: true
     envVars:
       - key: PYTHONUNBUFFERED
