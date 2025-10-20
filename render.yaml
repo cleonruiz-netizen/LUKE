@@ -6,6 +6,8 @@ services:
     dockerfilePath: ./Dockerfile
     autoDeploy: true
     envVars:
+      - key: RUN_MODE
+        value: "api"
       - key: PYTHONUNBUFFERED
         value: "1"
       - key: PINECONE_API_KEY
@@ -37,9 +39,11 @@ services:
     name: luke-scheduler
     env: docker
     plan: free
-    dockerfilePath: ./Dockerfile.scheduler
+    dockerfilePath: ./Dockerfile
     autoDeploy: true
     envVars:
+      - key: RUN_MODE
+        value: "scheduler"
       - key: PYTHONUNBUFFERED
         value: "1"
       - key: PINECONE_API_KEY
