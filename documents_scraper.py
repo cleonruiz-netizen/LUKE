@@ -43,43 +43,40 @@ from selenium.webdriver.common.action_chains import ActionChains
 class SPIJScraper:
     def __init__(self, headless=True, subject_folder=None):
         """Initialize the scraper with Chrome WebDriver and Supabase client"""
-        
-        # Initialize Supabase client
+
+        # === Supabase setup ===
         supabase_url = os.getenv("SUPABASE_URL")
         supabase_key = os.getenv("SUPABASE_KEY")
         self.supabase_bucket = os.getenv("SUPABASE_BUCKET")
-        
+
         if not all([supabase_url, supabase_key, self.supabase_bucket]):
             raise ValueError("Missing Supabase credentials. Please set SUPABASE_URL, SUPABASE_KEY, and SUPABASE_BUCKET in .env file")
-        
+
         self.supabase: Client = create_client(supabase_url, supabase_key)
         self.subject_folder = subject_folder or "general"
-        
+
         print(f"✓ Supabase client initialized")
         print(f"✓ Bucket: {self.supabase_bucket}")
         print(f"✓ Subject folder: {self.subject_folder}")
-        
+
+        # === Chrome options ===
         chrome_options = Options()
         if headless:
             chrome_options.add_argument('--headless=new')
-        
-        # Essential Chrome arguments
+
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-gpu')
         chrome_options.add_argument('--disable-blink-features=AutomationControlled')
         chrome_options.add_argument('--disable-extensions')
         chrome_options.add_argument('--window-size=1920,1080')
-
-        # Disable automation flags
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)
-        
-        # Use temporary directory for downloads
+
+        # === Temporary download directory ===
         self.temp_download_dir = tempfile.mkdtemp(prefix='spij_temp_')
         print(f"✓ Temporary download directory: {self.temp_download_dir}")
-        
-        # Download preferences
+
         prefs = {
             "download.default_directory": self.temp_download_dir,
             "download.prompt_for_download": False,
@@ -90,25 +87,41 @@ class SPIJScraper:
         }
         chrome_options.add_experimental_option("prefs", prefs)
 
-        # Detect Render or local
-        if os.environ.get("RENDER"):
-            # Running on Render – use system binaries
-            chrome_options.binary_location = shutil.which("chromium") or "/usr/bin/chromium"
-            service = Service(shutil.which("chromedriver") or "/usr/bin/chromedriver")
+        # === Detect Render or local ===
+        is_render = os.environ.get("RENDER") or os.environ.get("RENDER_INTERNAL_HOSTNAME")
+
+        if is_render:
+            # Render: use preinstalled system binaries
+            chrome_path = "/usr/bin/chromium"
+            driver_path = "/usr/bin/chromedriver"
+
+            # Explicitly verify paths exist
+            if not os.path.exists(chrome_path):
+                raise FileNotFoundError(f"Chromium not found at {chrome_path}")
+            if not os.path.exists(driver_path):
+                raise FileNotFoundError(f"Chromedriver not found at {driver_path}")
+
+            chrome_options.binary_location = chrome_path
+            service = Service(driver_path)
+
+            print(f"✓ Using Chromium at: {chrome_path}")
+            print(f"✓ Using Chromedriver at: {driver_path}")
+
         else:
-            # Local dev – use WebDriverManager
+            # Local: let webdriver_manager handle it
             service = Service(ChromeDriverManager().install())
 
-        # Initialize driver
+        # === Initialize WebDriver ===
         self.driver = webdriver.Chrome(service=service, options=chrome_options)
 
-        # Allow downloads in headless mode
+        # === Allow downloads in headless mode ===
         self.driver.execute_cdp_cmd(
             "Page.setDownloadBehavior",
-            {"behavior": "allow", "downloadPath": self.temp_download_dir}    
+            {"behavior": "allow", "downloadPath": self.temp_download_dir}
         )
 
         print("✓ Chrome WebDriver initialized successfully.")
+
         
         self.base_url = "https://spij.minjus.gob.pe"
         
