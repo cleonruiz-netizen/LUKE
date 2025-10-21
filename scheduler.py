@@ -42,7 +42,7 @@ async def run_weekly_scrape_cycle():
                     None, 
                     scrape_by_subject,
                     subject,  # subject_query
-                    2,        # max_depth (increase for deeper crawl)
+                    1,        # max_depth (increase for deeper crawl)
                     True      # headless
                 )
                 if result:

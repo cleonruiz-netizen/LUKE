@@ -34,4 +34,4 @@ async def run_now(request: Request):
 
 @app.get("/")
 def root():
-    return {"message": "Scheduler service running", "weekly_job": "Saturday 02:00 UTC"}
+    return {"message": "Scheduler service running", "weekly_job": "Saturday 02:00 PST"}
