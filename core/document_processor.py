@@ -18,21 +18,21 @@ else:
 
 
 
+from starlette.datastructures import UploadFile
+import os, requests, mimetypes
+
+
+
 class DocumentProcessor:
     """Handles file parsing, text extraction (including OCR), and quality checks."""
 
-    def __init__(self, file: Union[UploadFile, bytes, str]):
-        """
-        file can be:
-        - UploadFile (FastAPI upload)
-        - bytes (in-memory file)
-        - str (URL or local path)
-        """
+    def __init__(self, file):
         self.file_content = None
         self.filename = None
 
-        if isinstance(file, UploadFile):
-            self.filename = file.filename or "uploaded_file.pdf"  # fallback
+        # ✅ Detect UploadFile properly
+        if file.__class__.__name__ == "UploadFile":
+            self.filename = file.filename or "uploaded_file.pdf"
             file.file.seek(0)
             self.file_content = file.file.read()
 
@@ -41,12 +41,12 @@ class DocumentProcessor:
             self.file_content = file
 
         elif isinstance(file, str):
-            if file.startswith("http"):  # URL from Supabase
+            if file.startswith("http"):
                 self.filename = file.split("/")[-1] or "downloaded.pdf"
                 resp = requests.get(file)
                 resp.raise_for_status()
                 self.file_content = resp.content
-            else:  # local path
+            else:
                 self.filename = file.split("/")[-1]
                 with open(file, "rb") as f:
                     self.file_content = f.read()
@@ -54,20 +54,17 @@ class DocumentProcessor:
         else:
             raise ValueError(f"Unsupported file input type: {type(file)}")
 
-        # ✅ Improved extension/mimetype check
-        valid_exts = [".pdf", ".docx"]
+        # ✅ Extension check with fallback
         ext = os.path.splitext(self.filename)[1].lower()
-
+        valid_exts = [".pdf", ".docx"]
         if ext not in valid_exts:
-            # Try to detect actual type if extension missing
-            import mimetypes
             mime_type = mimetypes.guess_type(self.filename)[0]
             if mime_type not in ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]:
-                # Allow Swagger’s 'application/octet-stream' case
                 if hasattr(file, "content_type") and file.content_type == "application/octet-stream":
-                    pass  # allow it
+                    pass
                 else:
-                    raise ValueError(f"Unsupported file type or extension: {self.filename} ({file.content_type if hasattr(file, 'content_type') else 'unknown'})")
+                    raise ValueError(f"Unsupported file type or extension: {self.filename}")
+
 
         
 
