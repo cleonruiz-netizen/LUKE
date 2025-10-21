@@ -39,7 +39,7 @@ services:
       - key: GENERATION_MODEL
         value: "gpt-4-turbo"
 
-  - type: worker
+  - type: web
     name: luke-scheduler
     env: docker
     plan: standard
