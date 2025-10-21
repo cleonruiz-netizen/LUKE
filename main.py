@@ -31,11 +31,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 import uuid
 import traceback
+import requests
 from config import GENERATION_MODEL, OPENAI_API_KEY, CHAT_SESSIONS_DIR
+
+
+
 LATEST_DIR_SYMLINK = "versions/latest"
 PREVIOUS_DIR_SYMLINK = "versions/previous"
 CHANGES_DIR = "regulatory_changes"
 BASE_DOCUMENT_URL = "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma"
+
+SCHEDULER_URL = os.getenv("SCHEDULER_URL")  # e.g., https://luke-scheduler.onrender.com
+SCHEDULER_SECRET = os.getenv("SCHEDULER_SECRET")
 # --- FastAPI Application ---
 
 
@@ -97,11 +104,17 @@ def root():
     }
 
 
+@app.post("/trigger-scraper")
+def trigger_scraper():
+    """Trigger the scheduler service manually."""
+    if not SCHEDULER_URL or not SCHEDULER_SECRET:
+        raise HTTPException(status_code=500, detail="Scheduler configuration missing.")
 
-@app.post("/trigger_scraper")
-def trigger_scraper(background_tasks: BackgroundTasks):
-    background_tasks.add_task(run_manual_scrape)
-    return {"message": "Manual scraper started in background"}
+    try:
+        res = requests.post(f"{SCHEDULER_URL}/run", json={"secret": SCHEDULER_SECRET}, timeout=10)
+        return {"message": "Manual scraper triggered", "scheduler_response": res.json()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to contact scheduler: {e}")
 
 
 

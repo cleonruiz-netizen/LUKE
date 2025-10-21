@@ -102,7 +102,7 @@ def schedule_job():
         id="weekly_scrape_cycle",
         replace_existing=True
     )
-    print("✓ Weekly job scheduled for every Saturday at 02:00 UTC")
+    print("✓ Weekly job scheduled for every Saturday at 02:00 PST")
     job = scheduler.get_job("weekly_scrape_cycle")
 
 

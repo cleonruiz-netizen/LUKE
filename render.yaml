@@ -2,7 +2,7 @@ services:
   - type: web
     name: luke-api
     env: docker
-    plan: free
+    plan: standard
     dockerfilePath: ./Dockerfile
     autoDeploy: true
     envVars:
@@ -30,6 +30,10 @@ services:
         sync: false
       - key: SMTP_SERVER_PORT
         sync: false
+      - key: SCHEDULER_URL
+        sync: false      
+      - key: SCHEDULER_SECRET
+        sync: false
       - key: MONGO_DB_CONNECTION_STRING
         sync: false
       - key: GENERATION_MODEL
@@ -38,8 +42,8 @@ services:
   - type: worker
     name: luke-scheduler
     env: docker
-    plan: free
-    dockerfilePath: ./Dockerfile
+    plan: standard
+    dockerfilePath: ./Dockerfile.scheduler
     autoDeploy: true
     envVars:
       - key: RUN_MODE
@@ -70,3 +74,5 @@ services:
         sync: false
       - key: GENERATION_MODEL
         value: "gpt-4-turbo"
+      - key: SCHEDULER_SECRET
+        sync: false
