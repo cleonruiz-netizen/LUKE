@@ -39,10 +39,11 @@ services:
       - key: GENERATION_MODEL
         value: "gpt-4-turbo"
 
-  - type: web
-    name: luke-scheduler
+  - type: cron
+    name: luke-scheduler-job
     env: docker
     plan: standard
+    schedule: "0 2 * * 6"   # Every Saturday at 2 AM UTC
     dockerfilePath: ./Dockerfile.scheduler
     autoDeploy: true
     envVars:

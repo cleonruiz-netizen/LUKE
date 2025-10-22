@@ -1,5 +1,3 @@
-# documents_scraper.py
-
 """
 SPIJ PDF Scraper - Deep crawls Peru's Legal Information System
 Systematically explores all pages and uploads PDFs directly to Supabase storage,
@@ -59,9 +57,54 @@ class SPIJScraper:
         print(f"✓ Bucket: {self.supabase_bucket}")
         print(f"✓ Subject folder: {self.subject_folder}")
 
+        # Store configuration for driver restart
+        self.headless = headless
+        self.driver = None
+        self.temp_download_dir = None
+        
+        # Initialize driver
+        self._initialize_driver()
+        
+        self.base_url = "https://spij.minjus.gob.pe"
+        
+        # Tracking sets and dicts
+        self.visited_urls = set()
+        self.pdf_urls = set()
+        self.external_pdf_urls = set()
+        self.uploaded_count = 0
+        self.uploaded_pdfs = {}  # filename -> sha256 hash
+        self._processed_identifiers = set()  # Track processed URLs to avoid duplicates
+        
+        # Queue for BFS traversal
+        self.url_queue = deque()
+        
+        # Track pages visited since last restart
+        self.pages_since_restart = 0
+        self.restart_interval = 40
+
+    def _initialize_driver(self):
+        """Initialize or reinitialize the Chrome WebDriver"""
+        # Clean up existing driver if it exists
+        if self.driver:
+            try:
+                self.driver.quit()
+                print("✓ Previous driver closed")
+            except:
+                pass
+        
+        # === Temporary download directory ===
+        if self.temp_download_dir:
+            try:
+                shutil.rmtree(self.temp_download_dir, ignore_errors=True)
+            except:
+                pass
+        
+        self.temp_download_dir = tempfile.mkdtemp(prefix='spij_temp_')
+        print(f"✓ Temporary download directory: {self.temp_download_dir}")
+
         # === Chrome options ===
         chrome_options = Options()
-        if headless:
+        if self.headless:
             chrome_options.add_argument('--headless=new')
 
         chrome_options.add_argument('--no-sandbox')
@@ -72,10 +115,6 @@ class SPIJScraper:
         chrome_options.add_argument('--window-size=1920,1080')
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)
-
-        # === Temporary download directory ===
-        self.temp_download_dir = tempfile.mkdtemp(prefix='spij_temp_')
-        print(f"✓ Temporary download directory: {self.temp_download_dir}")
 
         prefs = {
             "download.default_directory": self.temp_download_dir,
@@ -122,19 +161,22 @@ class SPIJScraper:
 
         print("✓ Chrome WebDriver initialized successfully.")
 
-        
-        self.base_url = "https://spij.minjus.gob.pe"
-        
-        # Tracking sets and dicts
-        self.visited_urls = set()
-        self.pdf_urls = set()
-        self.external_pdf_urls = set()
-        self.uploaded_count = 0
-        self.uploaded_pdfs = {}  # filename -> sha256 hash
-        self._processed_identifiers = set()  # Track processed URLs to avoid duplicates
-        
-        # Queue for BFS traversal
-        self.url_queue = deque()
+    def _restart_driver_if_needed(self):
+        """Restart the driver if page limit reached"""
+        if self.pages_since_restart >= self.restart_interval:
+            print(f"\n{'='*70}")
+            print(f"🔄 RESTARTING DRIVER (visited {self.pages_since_restart} pages)")
+            print(f"{'='*70}\n")
+            self._initialize_driver()
+            self.pages_since_restart = 0
+            # Re-navigate to initial page and click INGRESAR
+            try:
+                self.driver.get("https://spij.minjus.gob.pe/spij-ext-web/#/sidenav/legislacion")
+                self.wait_for_page_load()
+                self.click_ingresar_button()
+                self.click_legislation_by_subject()
+            except Exception as e:
+                print(f"⚠ Warning during driver restart navigation: {e}")
 
     def compute_file_hash(self, file_bytes):
         """Compute SHA256 hash of file bytes"""
@@ -478,12 +520,17 @@ class SPIJScraper:
         """Crawl a single page: download PDFs and extract links based on depth"""
         if url in self.visited_urls: return
         
+        # Check if we need to restart the driver before processing this page
+        self._restart_driver_if_needed()
+        
         print(f"\n{'='*70}")
         print(f"Crawling (Depth {depth}): {url}")
         print(f"Progress: {len(self.visited_urls)} visited, {self.uploaded_count} uploaded, {len(self.url_queue)} in queue")
+        print(f"Pages since last restart: {self.pages_since_restart}/{self.restart_interval}")
         print(f"{'='*70}")
         
         self.visited_urls.add(url)
+        self.pages_since_restart += 1
         
         try:
             self.driver.get(url)
@@ -533,10 +580,10 @@ class SPIJScraper:
             self.deep_crawl(start_urls, max_depth)
             
         finally:
-            self.driver.quit()
+            if self.driver:
+                self.driver.quit()
             # Clean up temp directory
             try:
-                import shutil
                 shutil.rmtree(self.temp_download_dir, ignore_errors=True)
                 print(f"✓ Cleaned up temporary directory")
             except:
@@ -742,4 +789,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
