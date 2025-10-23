@@ -645,13 +645,13 @@ class SPIJScraper:
 
 # Central dictionary mapping subjects to their starting URLs
 URLS_BY_SUBJECT = {
-    "Anti-corruption": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682716",
-    "Anti-terrorism": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682717",
-    "Commercial": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682721",
-    "Constitutional": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682723",
-    "State Contracts and Acquisitions": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682724",
-    "Free Competition": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682762",
-    "Consumer Protection": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682779",
+    #"Anti-corruption": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682716",
+    #"Anti-terrorism": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682717",
+    #"Commercial": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682721",
+    #"Constitutional": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682723",
+    #"State Contracts and Acquisitions": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682724",
+    #"Free Competition": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682762",
+    #"Consumer Protection": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682779",
     "Registry": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682784",
     "Taxation": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682804",
 }
