@@ -41,6 +41,28 @@ CHANGES_DIR = "versions/changes"
 
 # ====================== UTILITIES ======================
 
+# Add this helper near the top with the other utilities:
+
+def list_all_files(folder_path: str) -> list[dict]:
+    """List *all* files in a Supabase Storage folder, paginating beyond 100 results."""
+    all_items = []
+    offset = 0
+    limit = 100
+
+    while True:
+        batch = supabase.storage.from_(SUPABASE_BUCKET).list(folder_path, {"limit": limit, "offset": offset})
+        if not batch:
+            break
+        all_items.extend(batch)
+        if len(batch) < limit:
+            break
+        offset += limit
+
+    return all_items
+
+
+
+
 def download_json_from_supabase(path: str) -> dict:
     """Download and decode JSON (hashes.json)."""
     try:
@@ -188,7 +210,7 @@ def manage_version_rotation(new_folder_prefix: str):
         try:
             # Step 1: Clear previous version for this subject
             try:
-                prev_files = supabase.storage.from_(SUPABASE_BUCKET).list(f"{PREVIOUS_DIR}/{subject}")
+                prev_files = prev_files = list_all_files(f"{PREVIOUS_DIR}/{subject}")
                 for f in prev_files:
                     supabase.storage.from_(SUPABASE_BUCKET).remove([f"{PREVIOUS_DIR}/{subject}/{f['name']}"])
                 print(f"    ✓ Cleared previous/{subject}")
@@ -197,7 +219,7 @@ def manage_version_rotation(new_folder_prefix: str):
             
             # Step 2: Copy latest → previous for this subject
             try:
-                latest_files = supabase.storage.from_(SUPABASE_BUCKET).list(f"{LATEST_DIR}/{subject}")
+                latest_files = latest_files = list_all_files(f"{LATEST_DIR}/{subject}")
                 for f in latest_files:
                     src = f"{LATEST_DIR}/{subject}/{f['name']}"
                     dst = f"{PREVIOUS_DIR}/{subject}/{f['name']}"
@@ -212,7 +234,7 @@ def manage_version_rotation(new_folder_prefix: str):
                 print(f"    ⚠ No latest version for {subject}: {e}")
             
             # Step 3: Promote new folder → latest for this subject
-            new_files = supabase.storage.from_(SUPABASE_BUCKET).list(f"{new_folder_prefix}/{subject}")
+            new_files = new_files = list_all_files(f"{new_folder_prefix}/{subject}")
             for f in new_files:
                 src = f"{new_folder_prefix}/{subject}/{f['name']}"
                 dst = f"{LATEST_DIR}/{subject}/{f['name']}"
@@ -234,7 +256,7 @@ def manage_version_rotation(new_folder_prefix: str):
         cleanup_subjects = list_subjects(new_folder_prefix)
         for subject in cleanup_subjects:
             try:
-                cleanup_files = supabase.storage.from_(SUPABASE_BUCKET).list(f"{new_folder_prefix}/{subject}")
+                cleanup_files = cleanup_files = list_all_files(f"{new_folder_prefix}/{subject}")
                 if cleanup_files:
                     files_to_remove = [f"{new_folder_prefix}/{subject}/{f['name']}" for f in cleanup_files]
                     # Remove files in batches (Supabase has limits)

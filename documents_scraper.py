@@ -643,18 +643,58 @@ class SPIJScraper:
         print(f"Subject folder: {self.subject_folder}\n{'='*70}\n")
 
 
+
+# Constitutional documents that should be directly downloaded (no deep crawling)
+CONSTITUTIONAL_DIRECT_URLS = {
+    "Political Constitution - (Constitutional Document)",
+    "Regulations of Congress - (Constitutional Document)",
+    "New Code of Constitutional Procedure - (Constitutional Document)",
+    "Civil Code - (Constitutional Document)",
+    "(TUO) Code of Civil Procedure - (Constitutional Document)",
+    "Criminal Code - (Constitutional Document)",
+    "Criminal Procedure Code - (Constitutional Document)",
+    "New Code of Criminal Procedure - (Constitutional Document)",
+    "Criminal Enforcement Code - (Constitutional Document)",
+    "Military Police Penal Code - (Constitutional Document)",
+    "Code of Military Police Justice - (Constitutional Document)",
+    "Code for Children and Adolescents - (Constitutional Document)",
+    "Code of Criminal Responsibility for Adolescents - (Constitutional Document)",
+    "Commercial Code - (Constitutional Document)",
+    "Consumer Protection and Defense Code - (Constitutional Document)",
+    "Tax Code (TUO) - (Constitutional Document)",
+    "Code of Criminal Procedures - (Constitutional Document)"
+}
+
+
 # Central dictionary mapping subjects to their starting URLs
 URLS_BY_SUBJECT = {
-    #"Anti-corruption": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682716",
-    #"Anti-terrorism": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682717",
-    #"Commercial": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682721",
-    #"Constitutional": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682723",
-    #"State Contracts and Acquisitions": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682724",
-    #"Free Competition": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682762",
-    #"Consumer Protection": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682779",
+    "Political Constitution - (Constitutional Document)" : "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682678",
+    "Regulations of Congress - (Constitutional Document)" : "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H779494",
+    "New Code of Constitutional Procedure - (Constitutional Document)" : "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H1288461",
+    "Civil Code - (Constitutional Document)" : "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682684",
+    "(TUO) Code of Civil Procedure - (Constitutional Document)" : "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682685",
+    "Criminal Code - (Constitutional Document)" : "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682692",
+    "Criminal Procedure Code - (Constitutional Document)" : "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682694",
+    "New Code of Criminal Procedure - (Constitutional Document)" : "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682695",
+    "Criminal Enforcement Code - (Constitutional Document)" : "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682688",
+    "Military Police Penal Code - (Constitutional Document)" : "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682700",
+    "Code of Military Police Justice - (Constitutional Document)" : "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682690",
+    "Code for Children and Adolescents - (Constitutional Document)" : "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682689",
+    "Code of Criminal Responsibility for Adolescents - (Constitutional Document)" : "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682687",
+    "Commercial Code - (Constitutional Document)" : "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682686",
+    "Consumer Protection and Defense Code - (Constitutional Document)" : "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682697",
+    "Tax Code (TUO) - (Constitutional Document)" : "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682696",
+    "Code of Criminal Procedures - (Constitutional Document)" : "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682693",
+    "Anti-corruption": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682716",
+    "Anti-terrorism": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682717",
+    "Commercial": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682721",
+    "Constitutional": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682723",
+    "State Contracts and Acquisitions": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682724",
+    "Free Competition": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682762",
+    "Consumer Protection": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682779",
     "Registry": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682784",
-    "Taxation": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682804",
-}
+    "Taxation": "https://spij.minjus.gob.pe/spij-ext-web/#/detallenorma/H682804"
+    }
 
 def get_llm_subject_match(subject_query: str, all_subjects: list) -> str | None:
     """
@@ -687,6 +727,7 @@ def get_llm_subject_match(subject_query: str, all_subjects: list) -> str | None:
         
         Based on the user query, which one subject from the list is the most relevant match?
         Respond with ONLY the name of the matched subject from the list and nothing else. Do not add any explanation or punctuation.
+        CRITICAL : The name should match exactly with the subjects in the predefined list.
         """
         
         print(f"Asking LLM to match query: '{subject_query}'...")
@@ -724,18 +765,27 @@ def scrape_by_subject(subject_query, max_depth=1, headless=False):
     all_subjects = list(URLS_BY_SUBJECT.keys())
     
     matched_subject = get_llm_subject_match(subject_query, all_subjects)
-
     if not matched_subject:
         print(f"Error: Could not find a valid subject matching '{subject_query}' using the LLM.")
         print("Available subjects are:", ", ".join(all_subjects))
         return None
 
     start_url = URLS_BY_SUBJECT[matched_subject]
-    
+
+    # ✅ Skip deep crawling for constitutional subjects
+    if matched_subject in CONSTITUTIONAL_DIRECT_URLS:
+        print(f"\n--- '{matched_subject}' detected as constitutional document. Only downloading direct PDF. ---")
+        try:
+            scraper = SPIJScraper(headless=headless, subject_folder=matched_subject)
+            scraper.scrape(start_urls=[start_url], max_depth=0)  # No deep crawling
+            return matched_subject
+        except Exception as e:
+            print(f"✗ Direct download failed: {e}")
+            return None
+
+    # Default path for normal subjects
     print(f"\n--- LLM Matched '{subject_query}' to subject: '{matched_subject}' ---")
-    
     try:
-        # Initialize and run the scraper - PDFs will be uploaded to Supabase in subject-specific folder
         scraper = SPIJScraper(headless=headless, subject_folder=matched_subject)
         scraper.scrape(start_urls=[start_url], max_depth=max_depth)
         return matched_subject
@@ -745,26 +795,38 @@ def scrape_by_subject(subject_query, max_depth=1, headless=False):
 
 
 
+
 def run_scraper():
     """
     Entry point for Render scheduler or FastAPI background trigger.
-    Automatically scrapes all subjects in URLS_BY_SUBJECT (headless mode).
+    Automatically scrapes all subjects in URLS_BY_SUBJECT.
+    - For constitutional documents: direct download only (no deep crawl)
+    - For other subjects: normal deep crawl
     """
-    print("="*80)
+    print("=" * 80)
     print("Starting LUKE Regulatory Scraper (Render Trigger Mode)")
-    print("="*80)
+    print("=" * 80)
 
     try:
         for subject in URLS_BY_SUBJECT.keys():
             print(f"\n--- Starting scrape for subject: {subject} ---")
-            scrape_by_subject(subject_query=subject, max_depth=1, headless=True)
+
+            # If subject is a constitutional document → direct download
+            if subject in CONSTITUTIONAL_DIRECT_URLS:
+                print(f"⚖️  Detected Constitutional Document → Direct Download Only")
+                scrape_by_subject(subject_query=subject, max_depth=0, headless=True)
+            else:
+                # Regular subjects → deep crawl (normal behavior)
+                scrape_by_subject(subject_query=subject, max_depth=1, headless=True)
+
         print("\n✓ All subjects scraped successfully.")
     except Exception as e:
         print(f"✗ Error running scraper: {e}")
     finally:
-        print("="*80)
+        print("=" * 80)
         print("Scraper run complete.")
-        print("="*80)
+        print("=" * 80)
+
 
 
 
@@ -775,7 +837,7 @@ def main():
     # Scrape using a natural language query
     # The LLM will match this to "State Contracts and Acquisitions"
     scrape_by_subject(
-        subject_query="laws about state contracts", 
+        subject_query="Political Constitution", 
         max_depth=1,
         headless=True
     )

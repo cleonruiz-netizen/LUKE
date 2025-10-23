@@ -5,9 +5,10 @@ from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # Import all the necessary components
-from documents_scraper import scrape_by_subject, URLS_BY_SUBJECT
+from documents_scraper import scrape_by_subject, URLS_BY_SUBJECT, CONSTITUTIONAL_DIRECT_URLS
 from versioning import manage_version_rotation, process_regulatory_changes
 from ingestion import main as ingest_main
+
 
 # Create the scheduler instance
 scheduler = AsyncIOScheduler(timezone="Asia/Karachi")
@@ -37,22 +38,26 @@ async def run_weekly_scrape_cycle():
         for i, subject in enumerate(all_subjects, 1):
             print(f"\nScraping subject {i}/{len(all_subjects)}: {subject}")
             try:
-                # Correct function signature: (subject_query, max_depth, headless)
+                # Determine crawl depth automatically
+                depth = 0 if subject in CONSTITUTIONAL_DIRECT_URLS else 1
+
                 result = await loop.run_in_executor(
                     None, 
                     scrape_by_subject,
-                    subject,  # subject_query
-                    1,        # max_depth (increase for deeper crawl)
-                    True      # headless
+                    subject,   # subject_query
+                    depth,     # max_depth — 0 for constitutional, 1 for others
+                    True       # headless
                 )
+
                 if result:
                     print(f"✓ Successfully scraped: {result}")
                 else:
                     print(f"⚠ No match found for: {subject}")
+
             except Exception as e:
                 print(f"✗ Error scraping {subject}: {e}")
-                # Continue with other subjects even if one fails
                 continue
+
         
         print("\n✓ SCRAPING COMPLETE")
        
