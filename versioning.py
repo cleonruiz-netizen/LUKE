@@ -99,8 +99,8 @@ def compare_docs_with_engine(latest_bytes: bytes, previous_bytes: bytes, filenam
     """Run document comparison using VersionCompareEngine (in-memory)."""
     try:
         engine = VersionCompareEngine(
-            file_v1=io.BytesIO(previous_bytes),
-            file_v2=io.BytesIO(latest_bytes)
+            file_v1=previous_bytes,
+            file_v2=latest_bytes
         )
         response = engine.compare()
         if not response.change_log:

@@ -11,6 +11,7 @@ from supabase import create_client, Client
 import config
 from .document_processor import DocumentProcessor
 from .schemas import ClauseAuditItem, ClauseAuditResponse
+from json_repair import repair_json 
 
 
 class ClauseAuditEngine:
@@ -93,27 +94,39 @@ class ClauseAuditEngine:
 
 
     def _run_audit_llm(self, text: str) -> dict:
-        """Runs the clause audit process with LLM and returns JSON."""
+        """Runs the clause audit process with LLM and returns validated JSON (auto-repair fallback)."""
 
         system_prompt = """
         You are LUKE, an expert legal auditor and compliance analyst.
 
         Your task:
-        1. Determine the type of document (e.g., Service Agreement, NDA, Employment Contract, etc.).
-        2. You are given a list of baseline clauses for reference.
-        3. Audit only the clauses specified by the user. The user’s clause names may differ from the baseline names, so match them as best you can.
-        4. For each clause you audit, classify as:
-            • PRESENT → clause exists and fulfills purpose
-            • DEVIATES → clause exists but with differences/reduced protection
-            • MISSING → clause does not exist
-        5. Provide for each clause:
-            - clause_name (user’s name or closest match)
-            - status ("PRESENT", "DEVIATES", "MISSING")
-            - summary
-            - page_number (if identifiable)
-            - quote (supporting text)
-        6. Focus on the intent, not exact wording. Be concise, factual, professional.
-        7. Respond ONLY in JSON format.
+            1. Determine the type of document (e.g., Service Agreement, NDA, Employment Contract, etc.).
+            2. You are given a list of baseline clauses for reference.
+            3. Audit only the clauses specified by the user. The user’s clause names may differ from the baseline names, so match them as best you can.
+            4. For each clause you audit, classify as:
+                • PRESENT → clause exists and fulfills purpose
+                • DEVIATES → clause exists but with differences/reduced protection
+                • MISSING → clause does not exist
+            5. Provide for each clause:
+                - clause_name (user’s name or closest match)
+                - status ("PRESENT", "DEVIATES", "MISSING")
+                - summary
+                - page_number (if identifiable)
+                - quote (supporting text)
+            6. Focus on the intent, not exact wording. Be concise, factual, professional.
+            7. You MUST reply **only** in this exact JSON format:
+            {
+                "document_type": "string",
+                "audited_clauses": [
+                {
+                    "clause_name": "string",
+                    "status": "PRESENT|DEVIATES|MISSING",
+                    "summary": "string",
+                    "page_number": int or null,
+                    "quote": "string"
+                }]
+            }
+        Ensure the JSON is valid. If unsure about a clause, classify as MISSING.
         """
 
         user_prompt = f"""
@@ -129,23 +142,55 @@ class ClauseAuditEngine:
         {', '.join(self.checklist)}
 
         Analyze the document, infer its type, and audit only the user-specified clauses.
-        Map them to baseline clauses if needed, but only include those requested by the user.
         """
 
+        # Step 1: Run LLM
         response = self.client.chat.completions.create(
             model=config.GENERATION_MODEL,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            response_format={"type": "json_object"},
             temperature=0.1,
+            response_format={"type": "json_object"},
         )
 
+        raw_output = response.choices[0].message.content.strip()
+        print("🔍 Raw LLM output:", raw_output[:800])  # Debug log (first 800 chars)
+
+        # Step 2: Try parsing normally
         try:
-            return json.loads(response.choices[0].message.content)
+            parsed = json.loads(raw_output)
         except json.JSONDecodeError:
-            return {"document_type": "Unknown", "audited_clauses": []}
+            # Step 3: Attempt auto repair if invalid JSON
+            try:
+                repaired = repair_json(raw_output)
+                parsed = json.loads(repaired)
+                print("🩹 JSON repaired successfully.")
+            except Exception as e:
+                print(f"❌ JSON repair failed: {e}")
+                parsed = {"document_type": "Unknown", "audited_clauses": []}
+
+        # Step 4: Validate structure and fill defaults if missing
+        if not isinstance(parsed, dict):
+            parsed = {"document_type": "Unknown", "audited_clauses": []}
+
+        if "audited_clauses" not in parsed or not isinstance(parsed["audited_clauses"], list):
+            parsed["audited_clauses"] = []
+
+        # Ensure every clause has all required keys with defaults
+        normalized = []
+        for c in parsed["audited_clauses"]:
+            normalized.append({
+                "clause_name": c.get("clause_name", "Unknown"),
+                "status": c.get("status", "MISSING"),
+                "summary": c.get("summary", "No summary provided."),
+                "page_number": c.get("page_number", None),
+                "quote": c.get("quote", ""),
+            })
+        parsed["audited_clauses"] = normalized
+
+        return parsed
 
 
 

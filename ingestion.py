@@ -88,8 +88,8 @@ def upload_to_supabase(filename: str, data: dict):
         json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
         supabase.storage.from_(SUPABASE_BUCKET).upload(
             path=f"{INDEX_DIR}/{filename}",
-            file=json_bytes,  # pass bytes, not BytesIO
-            file_options={"content_type": "application/json", "upsert": True}
+            file=json_bytes,
+            file_options={"content_type": "application/json", "upsert": "true"}
         )
         print(f"☁️ Uploaded {filename} to Supabase successfully.")
     except Exception as e:
