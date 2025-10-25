@@ -125,4 +125,4 @@ websockets==15.0.1
 wsproto==1.2.0
 yarl==1.22.0
 pydantic[email]
-json-repair==0.26.1
+json-repair==0.25.0
