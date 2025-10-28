@@ -191,7 +191,11 @@ def ingest_subject(subject: str, processed_log: dict, local_index: dict):
     print("\nEmbedding new chunks...")
     texts = [chunk.text for chunk in new_chunks]
     embeddings = retriever.batch_embed(texts)
-
+    #  Attach embeddings locally for persistence so local_index.json contains embeddings
+    for chunk, emb in zip(new_chunks, embeddings):
+    # emb might be a numpy array or a list; ensure stored as plain list
+        chunk.embedding = emb.tolist() if hasattr(emb, "tolist") else list(emb) if emb is not None else None
+        chunk.embedding_model = retriever.embedding_model
     print("Upserting to Pinecone...")
     vector_store.upsert_chunks(new_chunks, embeddings)
 

@@ -12,6 +12,9 @@ import cohere
 from sentence_transformers import SentenceTransformer
 from rank_bm25 import BM25Okapi
 
+from supabase import create_client, Client
+import os
+import json
 
 @dataclass
 class LegalChunk:
@@ -45,6 +48,7 @@ class LegalChunk:
     word_count: int = 0
     
     # Embedding metadata
+    embedding: Optional[List[float]] = None        # <-- ADD THIS LINE
     embedding_model: Optional[str] = None
     
     def __post_init__(self):
@@ -347,11 +351,35 @@ class HybridRetriever:
             self.sentence_model = SentenceTransformer(self.embedding_model_name)
             self.embedding_model = "sentence-transformers"
         
+        SUPABASE_URL = os.getenv("SUPABASE_URL")
+        SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+        SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET")
+
+        if not all([SUPABASE_URL, SUPABASE_KEY, SUPABASE_BUCKET]):
+            raise ValueError("Missing Supabase credentials. Please set SUPABASE_URL, SUPABASE_KEY, SUPABASE_BUCKET in .env")
+
+        self.supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        self.index_dir = "indexes"  # same as ingestion.py
+        self.local_index_filename = "local_index.json"
+
         self.bm25 = None
-        self.chunks = []
-        
+        self.chunks = self._load_index_from_supabase()
+
         self.cohere_client = cohere.Client(cohere_api_key) if cohere_api_key else None
-    
+
+    def _load_index_from_supabase(self) -> List[LegalChunk]:
+        """Downloads and loads local_index.json directly from Supabase."""
+        try:
+            data = self.supabase.storage.from_(os.getenv("SUPABASE_BUCKET")).download(
+                f"{self.index_dir}/{self.local_index_filename}"
+            )
+            index_data = json.loads(data.decode("utf-8"))
+            print("☁️ Loaded local_index.json from Supabase.")
+            return [LegalChunk(**chunk_data) for chunk_data in index_data.get("chunks", [])]
+        except Exception as e:
+            print(f"⚠ Could not load index from Supabase: {e}")
+            return []
+
     def get_embedding(self, text: str) -> np.ndarray:
         if self.embedding_model == "openai":
             response = self.openai_client.embeddings.create(model="text-embedding-3-small", input=text.replace("\n", " "))
@@ -413,9 +441,9 @@ class HybridRetriever:
         1. Fetches a large candidate pool (initial_k) using a hybrid of dense and sparse scores.
         2. Uses a powerful re-ranker to select the best results (final_k) from the pool.
         """
-        if not self.chunks:
-            return []
-
+        # if not self.chunks:
+        #     return []
+        self.initialize_bm25(self.chunks)
         # 1. Dense (vector) retrieval
         query_embedding = self.get_embedding(query)
         dense_results = vector_store.search(query_embedding, top_k=initial_k)
