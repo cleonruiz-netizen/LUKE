@@ -16,6 +16,28 @@ from core.regulatorycalender_engine import RegulatoryCalendarEngine
 import config
 
 class IntakeEngine:
+    
+    def _is_legal_research_query(self, message: str, uploaded_files: Optional[List[UploadFile]]) -> bool:
+        """
+        Uses OpenAI to classify if the user's message is a legal research question, based only on the content of the query.
+        Returns True if AI thinks it's a legal research query, else False.
+        """
+        system_prompt = (
+            "You are an expert legal assistant. "
+            "Analyze the following user message and answer ONLY 'yes' or 'no': "
+            "Is this message a legal research question (e.g., asking for legal information, analysis, summary, or advice about laws, regulations, clauses, or documents)? "
+            "Do NOT consider whether files are uploaded. Only analyze the content of the message."
+        )
+        user_prompt = f"Message: {message}"
+        response = self.client.chat.completions.create(
+            model=config.GENERATION_MODEL,
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
+        )
+        raw_answer = response.choices[0].message.content.strip()
+        print(f"[AI Legal Research Query Detection] Raw response: {raw_answer}")
+        answer = raw_answer.lower()
+        return answer.startswith("yes")
+    
     def __init__(self):
         self.client = OpenAI(api_key=config.OPENAI_API_KEY)
         if not config.MONGO_DB_CONNECTION_STRING:
@@ -98,7 +120,49 @@ class IntakeEngine:
         history = self._load_history(session_id)
         session_data = self.collection.find_one({"session_id": session_id})
         goal = session_data.get("goal", "new_matter_intake")
-        
+
+        # Check if this is a legal research query about uploaded docs
+        if self._is_legal_research_query(new_message, uploaded_files):
+            # Use the first file for demo; you can extend to multiple files
+            file = uploaded_files[0] if uploaded_files else None
+            from core.schemas import LegalQuestionRequest
+            from main import app  # Import FastAPI app to access query_engine
+            request = LegalQuestionRequest(question_text=new_message, file=file)
+            response = app.state.query_engine.answer_question(request)
+
+            # Compose a rich, natural chat response including all relevant info
+            chat_content = f"""
+{response.answer_text}
+
+"""
+            if response.citations:
+                chat_content += "\nCitations:\n"
+                for c in response.citations:
+                    chat_content += f"- {c.source_name} ({c.source_title}), Section: {c.article_or_section}, Page: {c.page_number}\n  Quote: {c.quote}\n"
+            if response.official_pdf_links:
+                chat_content += "\nOfficial PDF Links:\n"
+                for link in response.official_pdf_links:
+                    chat_content += f"- {link}\n"
+            if response.confidence_flags:
+                chat_content += "\nConfidence Flags:\n"
+                for flag in response.confidence_flags:
+                    chat_content += f"- {flag}\n"
+
+            # Add a friendly summary for chat
+            chat_content += "\nIf you need further details or clarification, feel free to ask!"
+
+            ai_response_message = ChatMessage(role="assistant", content=chat_content.strip())
+            final_history = history + [ChatMessage(role="user", content=new_message), ai_response_message]
+            self._save_history(session_id, final_history)
+            return ChatTurnResponse(
+                session_id=session_id,
+                ai_response=ai_response_message,
+                conversation_status="complete" if response else "in_progress",
+                final_work_product=None,
+                updated_history=final_history
+            )
+
+        # Otherwise, normal chatbot flow
         user_content = new_message
         if uploaded_files:
             for file in uploaded_files:
@@ -112,18 +176,18 @@ class IntakeEngine:
                     user_content += f"\n\n[Could not process uploaded file '{file.filename}'. Error: {e}]"
 
         updated_history = history + [ChatMessage(role="user", content=user_content)]
-        
+
         system_prompt = f"""You are LUKE, an expert paralegal conducting a '{goal}'. Guide the user with one question at a time. If you need a document, end with `[AWAITING_DOCUMENT]`. When you have all facts, end with `[READY_TO_FINALIZE]`."""
-        
+
         response = self.client.chat.completions.create(
             model=config.GENERATION_MODEL,
             messages=[ChatMessage(role="system", content=system_prompt).model_dump()] + [msg.model_dump() for msg in updated_history]
         )
-        
+
         ai_content = response.choices[0].message.content
         status = "in_progress"
         final_product = None
-        
+
         if "[AWAITING_DOCUMENT]" in ai_content:
             status = "awaiting_document"
             ai_content = ai_content.replace("[AWAITING_DOCUMENT]", "").strip()
@@ -134,9 +198,9 @@ class IntakeEngine:
 
         ai_response_message = ChatMessage(role="assistant", content=ai_content)
         final_history = updated_history + [ai_response_message]
-        
+
         self._save_history(session_id, final_history)
-        
+
         return ChatTurnResponse(
             session_id=session_id,
             ai_response=ai_response_message,

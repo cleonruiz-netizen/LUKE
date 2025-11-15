@@ -308,6 +308,7 @@ async def start_chat_session(
     """
     Initiates a brand new conversational session for a user.
     Always creates a new chat, even if others exist for the user.
+    If the user's initial message is a legal research question about uploaded documents, the chatbot will answer using the legal research workflow (Flow 1). Otherwise, it behaves as a normal intake chatbot.
     """
     try:
         
@@ -332,6 +333,7 @@ async def continue_chat_turn(
 ):
     """
     Continues an existing conversation turn using its unique session_id.
+    If the user's message is a legal research question about uploaded documents, the chatbot will answer using the legal research workflow (Flow 1). Otherwise, it behaves as a normal intake chatbot.
     """
     try:
         
