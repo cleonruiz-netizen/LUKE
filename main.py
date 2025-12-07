@@ -52,18 +52,14 @@ os.makedirs(CHAT_SESSIONS_DIR, exist_ok=True)
 async def lifespan(app: FastAPI):
     """Handles startup and shutdown events."""
     print("--- FastAPI app starting up... ---")
-    schedule_job()
-    scheduler.start()
     app.state.mongo_client = MongoClient(config.MONGO_DB_CONNECTION_STRING)
     app.state.db = app.state.mongo_client.LUKE
     print("--- MongoDB connection established. ---")
 
-    print("--- Scheduler has been started for automatic weekly scrapes. ---")
     yield
     
     print("--- MongoDB connection closed. ---")
     print("--- FastAPI app shutting down... ---")
-    scheduler.shutdown()
     app.state.mongo_client.close()
 
 
